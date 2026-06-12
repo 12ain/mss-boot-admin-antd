@@ -1,6 +1,6 @@
 # mss-boot-admin-antd
 
-[![CI](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml) [![CodeQL](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml) [![Release](https://img.shields.io/github/v/release/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/releases) [![License](https://img.shields.io/github/license/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
+[![CI](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml) [![CodeQL](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml) [![Release](https://img.shields.io/github/v/release/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/releases) [![License](https://img.shields.io/github/license/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
 
 [English](./README.md) | 简体中文
 
@@ -59,9 +59,9 @@
 
 ## 📦 准备工作
 
-- 安装 golang1.21+
-- 安装 mysql8.0+
-- 安装 nodejs18.16.0+
+- 后端安装 Go 1.26+
+- 后端集成依赖可选安装 MySQL 8.0+、Redis 7+
+- 前端安装 Node.js 22+、pnpm 9.x
 
 ## 📦 快速开始
 
@@ -79,24 +79,24 @@ git clone https://github.com/mss-boot-io/mss-boot-admin-antd.git
 ```shell
 # 进入后端项目
 cd mss-boot-admin
-# 配置数据库连接信息(可根据实际情况修改)
-export DB_DSN="root:123456@tcp(127.0.0.1:3306)/mss-boot-admin-local?charset=utf8mb4&parseTime=True&loc=Local"
-# 迁移数据库
-go run main.go migrate
+# 默认本地后端配置使用 SQLite: mss-boot-admin-local.db
+go run . migrate
 ```
+
+如需本地使用 MySQL，请先在后端仓库启动 `compose/mysql/docker-compose.yml`，并修改 `config/application.yml` 后再执行迁移。
 
 ### 3. 生成 API 接口信息
 
 ```shell
 # 生成api接口信息
-go run main.go server -a
+go run . server -a
 ```
 
 ### 4. 启动后端服务
 
 ```shell
 # 启动后端服务
-go run main.go server
+go run . server
 ```
 
 ### 5. 启动前端服务
@@ -105,10 +105,25 @@ go run main.go server
 # 进入前端项目
 cd mss-boot-admin-antd
 # 安装依赖
-npm install
+corepack enable
+pnpm install
 # 启动前端服务
-npm run start
+pnpm dev
 ```
+
+## 前端环境矩阵
+
+前端通过 `UMI_ENV` 与 `REACT_APP_ENV` 选择环境配置。`API_URL` 由对应的 `config/config.prod.*.ts` 文件定义，本地开发也会使用 dev proxy。
+
+| 场景 | 命令 | API 目标 | 用途 |
+| --- | --- | --- | --- |
+| 本地开发 | `pnpm dev` 或 `pnpm start:no-mock` | `/admin/`、`/public/` 通过 dev proxy 转发到 `http://localhost:8080` | 对接本地 `mss-boot-admin` 后端。 |
+| 本地构建 | `pnpm build:local` | `http://localhost:8080` | 以生产构建方式验证本地后端。 |
+| Alpha | `pnpm start:alpha` / `pnpm build:alpha` | `https://admin-api-alpha.mss-boot-io.top` | 开发后端环境，用于联调验证。 |
+| Beta | `pnpm start:beta` / `pnpm build:beta` | `https://admin-api-beta.mss-boot-io.top` | 对外 beta 目标，需先完成本地和 CI 验证。 |
+| Production | `pnpm start:prod` / `pnpm build:prod` | `https://admin-api.mss-boot-io.top` | 生产发布构建目标。 |
+
+CI 与 Cloudflare workflow 使用 Node.js 22 和 pnpm 9。Cloudflare alpha、beta、prod 发布均保持手动 `workflow_dispatch`；PR、Dependabot 分支和普通 `codex/**` 审查分支不应自动发布前端。
 
 ## 📨 互动
 
@@ -150,6 +165,6 @@ npm run start
 
 ## 🔑 License
 
-[MIT](https://github.com/mss-boot-io/mss-boot-admin/blob/main/LICENSE)
+[MIT](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
 
 Copyright (c) 2024 mss-boot-io

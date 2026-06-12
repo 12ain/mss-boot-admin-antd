@@ -1,6 +1,6 @@
 # mss-boot-admin-antd
 
-[![CI](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml) [![CodeQL](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml/badge.svg)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml) [![Release](https://img.shields.io/github/v/release/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/releases) [![License](https://img.shields.io/github/license/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
+[![CI](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/ci.yml) [![CodeQL](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/codeql.yml) [![OpenSSF Scorecard](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml/badge.svg?branch=main)](https://github.com/mss-boot-io/mss-boot-admin-antd/actions/workflows/scorecard.yml) [![Release](https://img.shields.io/github/v/release/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/releases) [![License](https://img.shields.io/github/license/mss-boot-io/mss-boot-admin-antd.svg?style=flat-square)](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
 
 English | [简体中文](./README.zh-CN.md)
 
@@ -68,9 +68,9 @@ The frontend has undergone comprehensive polish rounds focusing on:
 
 ## 📦 Preparation
 
-- Install golang1.21+
-- Install mysql8.0+
-- Install nodejs18.16.0+
+- Backend: Go 1.26+
+- Optional backend integration dependencies: MySQL 8.0+ and Redis 7+
+- Frontend: Node.js 22+ and pnpm 9.x
 
 ## 📦 Quick start
 
@@ -88,24 +88,24 @@ git clone https://github.com/mss-boot-io/mss-boot-admin-antd.git
 ```shell
 # Enter the backend project
 cd mss-boot-admin
-# Configure database connection information (can be modified according to actual situation)
-export DB_DSN="root:123456@tcp(127.0.0.1:3306)/mss-boot-admin-local?charset=utf8mb4&parseTime=True&loc=Local"
-# Migrate the database
-go run main.go migrate
+# The default local backend config uses SQLite: mss-boot-admin-local.db
+go run . migrate
 ```
+
+To use MySQL locally, start `compose/mysql/docker-compose.yml` in the backend repository and update `config/application.yml` before running migrations.
 
 ### 3. Generate API interface information
 
 ```shell
 # Generate API interface information
-go run main.go server -a
+go run . server -a
 ```
 
 ### 4. Start the backend service
 
 ```shell
 # Start the backend service
-go run main.go server
+go run . server
 ```
 
 ### 5. Start the front-end service
@@ -114,10 +114,25 @@ go run main.go server
 # Enter the front-end project
 cd mss-boot-admin-antd
 # Install dependencies
-npm install
+corepack enable
+pnpm install
 # Start the front-end service
-npm run start
+pnpm dev
 ```
+
+## Frontend Environment Matrix
+
+The frontend uses `UMI_ENV` and `REACT_APP_ENV` to choose the environment-specific config. `API_URL` is defined in the matching `config/config.prod.*.ts` file or by the dev proxy.
+
+| Context | Command | API target | Usage |
+| --- | --- | --- | --- |
+| Local development | `pnpm dev` or `pnpm start:no-mock` | Dev proxy to `http://localhost:8080` for `/admin/` and `/public/` | Use with a local `mss-boot-admin` backend. |
+| Local build | `pnpm build:local` | `http://localhost:8080` | Validate a production-style bundle against a local backend. |
+| Alpha | `pnpm start:alpha` / `pnpm build:alpha` | `https://admin-api-alpha.mss-boot-io.top` | Development backend environment for integration checks. |
+| Beta | `pnpm start:beta` / `pnpm build:beta` | `https://admin-api-beta.mss-boot-io.top` | Public beta target after local and CI verification. |
+| Production | `pnpm start:prod` / `pnpm build:prod` | `https://admin-api.mss-boot-io.top` | Production release build target. |
+
+CI and Cloudflare workflows use Node.js 22 and pnpm 9. Cloudflare alpha, beta, and production workflows are manual `workflow_dispatch` deployments; PRs, Dependabot branches, and normal `codex/**` review branches should not publish frontend changes.
 
 ## 📨 Interaction
 
@@ -164,37 +179,40 @@ The project follows strict testing requirements with comprehensive test coverage
 ### Test Types
 
 #### 1. Unit Tests
-- **Location**: `__tests__/*.test.ts` or `*.test.tsx` 
+
+- **Location**: `__tests__/*.test.ts` or `*.test.tsx`
 - **Minimum coverage**: **80%**
-- **Run command**: 
+- **Run command**:
   ```bash
   pnpm test --coverage
   ```
 
-#### 2. Integration Tests  
+#### 2. Integration Tests
+
 - **Focus**: Component interactions with API mocks
 - **Tools**: React Testing Library + Mock Service Worker (MSW)
 - **Run command**:
   ```bash
-  pnpm test:integration
+  pnpm test
   ```
 
-#### 3. End-to-End (E2 E) Tests
+#### 3. End-to-End (E2E) Tests
+
 - **Full Stack Testing**: Uses Playwright for browser automation
 - **Critical user flows**: login, CRUD operations, permissions
 - **Mobile testing**: Comprehensive iPhone 12 Pro viewport tests
-- **Run command**: 
+- **Run command**:
   ```bash
-  pnpm e2e
+  pnpm run test:e2e
   ```
 
 ### Coverage Requirements
 
-| Component | Unit Tests | Integration Tests | E2E Tests | Min Coverage |
-|-----------|-----------|-------------------|-----------|--------------|
-| Hooks | ✅ Required | Optional | N/A | 80% |
-| Components | ✅ Required | Optional | Optional | 75% |
-| Utils | ✅ Required | Optional | N/A | 90% |
+| Component  | Unit Tests  | Integration Tests | E2E Tests | Min Coverage |
+| ---------- | ----------- | ----------------- | --------- | ------------ |
+| Hooks      | ✅ Required | Optional          | N/A       | 80%          |
+| Components | ✅ Required | Optional          | Optional  | 75%          |
+| Utils      | ✅ Required | Optional          | N/A       | 90%          |
 
 Detailed testing instructions are available in [TESTING.md](./TESTING.md).
 
@@ -219,7 +237,7 @@ The application features comprehensive mobile H5 adaptation with responsive desi
 
 ### Development Guidelines
 
-- **Testing Mobile**: Use `pnpm e2e --project='iPhone 12 Pro'` to run mobile-specific tests
+- **Testing Mobile**: Use `pnpm run test:e2e -- --project='iPhone 12 Pro'` to run mobile-specific tests
 - **Responsive Breakpoints**: Mobile layout activates below 768px width
 - **Touch Targets**: Ensure all interactive elements are at least 44px for touch accessibility
 
@@ -227,6 +245,6 @@ For detailed mobile development documentation, see the full documentation site.
 
 ## 🔑 License
 
-[MIT](https://github.com/mss-boot-io/mss-boot-admin/blob/main/LICENSE)
+[MIT](https://github.com/mss-boot-io/mss-boot-admin-antd/blob/main/LICENSE)
 
 Copyright (c) 2024 mss-boot-io
